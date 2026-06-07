@@ -17,6 +17,7 @@ export interface Business {
   tags?: string[];
   aiScore?: number;     // 0–100, AI relevance score
   aiReason?: string;    // AI explanation why ranked here
+  twogisUrl?: string;   // link to real 2GIS page with reviews
 }
 
 export interface SearchResult {

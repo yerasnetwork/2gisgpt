@@ -1,5 +1,5 @@
 import { Business, City } from "./types";
-import { KZ_CITIES } from "./cities";
+import { KZ_CITIES, citySlug } from "./cities";
 
 /* ── Types mirroring 2GIS API response ─────────────────────────── */
 interface DGisPoint    { lat: number; lon: number; }
@@ -99,6 +99,7 @@ function mapItem(item: DGisItem, city: City): Business {
     phone,
     tags:        item.rubrics?.slice(1).map(r => r.name) ?? [],
     aiScore:     calcAiScore(rating, reviewCount),
+    twogisUrl:   `https://2gis.kz/${citySlug(city)}/firm/${item.id}`,
   };
 }
 

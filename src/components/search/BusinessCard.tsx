@@ -1,5 +1,5 @@
 "use client";
-import { MapPin, Clock, Phone, ChevronRight } from "lucide-react";
+import { MapPin, Clock, Phone, ChevronRight, ExternalLink, Star } from "lucide-react";
 import { clsx } from "clsx";
 import { Business } from "@/lib/types";
 import { StarRating } from "@/components/ui/StarRating";
@@ -87,23 +87,36 @@ export function BusinessCard({ business: b, rank }: BusinessCardProps) {
           </div>
         )}
 
-        {/* AI score bar */}
-        {b.aiScore !== undefined && (
-          <div className="flex items-start gap-2 pt-1 border-t border-border/40">
-            <div className="flex items-center gap-1 shrink-0 mt-0.5">
-              <div className="h-1.5 w-16 sm:w-20 rounded-full bg-border overflow-hidden">
+        {/* AI score bar + 2GIS reviews button */}
+        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/40">
+          {b.aiScore !== undefined ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="h-1.5 w-14 sm:w-20 rounded-full bg-border overflow-hidden shrink-0">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
                   style={{ width: `${b.aiScore}%` }}
                 />
               </div>
-              <span className="text-[11px] font-semibold text-primary">{b.aiScore}</span>
+              <span className="text-[11px] font-semibold text-primary shrink-0">{b.aiScore}</span>
+              {b.aiReason && (
+                <p className="text-[11px] text-muted leading-relaxed line-clamp-1 hidden sm:block">{b.aiReason}</p>
+              )}
             </div>
-            {b.aiReason && (
-              <p className="text-[11px] text-muted leading-relaxed line-clamp-2">{b.aiReason}</p>
-            )}
-          </div>
-        )}
+          ) : <div />}
+
+          {b.twogisUrl && (
+            <a
+              href={b.twogisUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="flex items-center gap-1 shrink-0 text-[11px] px-2.5 py-1 rounded-lg border border-border bg-bg-card hover:border-primary/40 hover:text-primary text-muted transition-all"
+            >
+              <Star size={9} className="shrink-0" />
+              Отзывы
+              <ExternalLink size={9} className="shrink-0" />
+            </a>
+          )}</div>
       </div>
     </article>
   );

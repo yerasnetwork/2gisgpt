@@ -91,53 +91,6 @@ async function streamClaude(
   }
 }
 
-/* ── Claude generates realistic business listings ─────────────── */
-async function generateBusinesses(
-  apiKey: string,
-  query: string,
-  city: string,
-  intent: SearchFilters,
-): Promise<Business[]> {
-  const now   = new Date().toLocaleTimeString("ru-RU", { timeZone: "Asia/Almaty", hour: "2-digit", minute: "2-digit" });
-  const price = intent.maxPrice ? `до ${["₸","₸₸","₸₸₸"][intent.maxPrice - 1]}` : "любая цена";
-
-  const raw = await callClaude(
-    apiKey,
-    "You generate realistic Kazakhstan business listing data. Return ONLY a valid JSON array. No markdown fences. No explanation.",
-    `Generate 5 realistic businesses for the query "${query}" in ${city}, Kazakhstan.
-Filters: ${intent.openNow ? "open now only, " : ""}price: ${price}.
-Current Almaty time: ${now}.
-
-Return a JSON array. Each item must have exactly these fields (keep values SHORT to fit token limit):
-{"id":"str","name":"short name","category":"Кофейня","address":"ул. Достык 12","city":"${city}","rating":4.5,"reviewCount":200,"priceLevel":2,"isOpen":true,"openUntil":"22:00","tags":["tag1","tag2"],"aiScore":80,"aiReason":"short reason in Russian"}
-
-Use real ${city} street names. Business names should be short and local-sounding.
-Return ONLY the JSON array, nothing else.`,
-    2500,
-  );
-
-  try {
-    if (!raw) throw new Error("empty response from Claude");
-    const cleaned = raw.replace(/```json\n?|```\n?/g, "").trim();
-    const start   = cleaned.indexOf("[");
-    const end     = cleaned.lastIndexOf("]") + 1;
-    if (start === -1 || end <= start) throw new Error(`no JSON array in: ${cleaned.slice(0, 100)}`);
-    const items = JSON.parse(cleaned.slice(start, end)) as Business[];
-    return items.map((b, i) => ({
-      ...b,
-      id: b.id ?? String(i),
-      city,
-      rating:      Math.min(5, Math.max(1, Number(b.rating) || 4.2)),
-      reviewCount: Number(b.reviewCount) || 100,
-      priceLevel:  ([1, 2, 3] as const).includes(b.priceLevel as 1|2|3) ? b.priceLevel : 2,
-      aiScore:     Math.min(99, Math.max(30, Number(b.aiScore) || 70)),
-    }));
-  } catch (e) {
-    console.error("[generateBusinesses] parse error:", (e as Error).message, "| raw snippet:", raw.slice(0, 200));
-    return [];
-  }
-}
-
 /* ── Main route ──────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   const start = Date.now();
@@ -184,50 +137,46 @@ export async function POST(req: NextRequest) {
           filters = JSON.parse(c) as SearchFilters;
         } catch { /* use defaults */ }
 
-        /* ── Step 2: Try 2GIS, fallback to Claude generation ── */
+        /* ── Step 2: Search 2GIS ── */
         let businesses: Business[] = [];
-        let usedFallback = false;
 
         if (TWOGIS_KEY) {
           try {
             businesses = await searchPlaces(query, city, filters, TWOGIS_KEY, 10);
-          } catch { /* 2GIS failed, will use Claude */ }
+          } catch { /* 2GIS unavailable */ }
         }
 
-        if (businesses.length === 0) {
-          usedFallback = true;
-          businesses = await generateBusinesses(ANTHROPIC_KEY, query, city, filters);
-        }
-
-        /* apply client-side filters only to 2GIS results (Claude already respects them in the prompt) */
-        if (!usedFallback) {
-          if (filters.openNow)  businesses = businesses.filter(b => b.isOpen);
-          if (filters.maxPrice) businesses = businesses.filter(b => b.priceLevel <= filters.maxPrice!);
-        }
+        /* apply client-side filters */
+        if (filters.openNow)  businesses = businesses.filter(b => b.isOpen);
+        if (filters.maxPrice) businesses = businesses.filter(b => b.priceLevel <= filters.maxPrice!);
         businesses.sort((a, b) => (b.aiScore ?? 0) - (a.aiScore ?? 0));
-
-        if (usedFallback && TWOGIS_KEY) {
-          sse(ctrl, { type: "warn", message: "2GIS Catalog API недоступен — результаты сгенерированы AI на основе реальных данных города." });
-        }
 
         /* ── Step 3: Send businesses immediately ── */
         sse(ctrl, { type: "businesses", data: businesses });
 
-        /* ── Step 4: Stream summary ── */
-        const topList = businesses.slice(0, 6)
-          .map((b, i) =>
-            `${i + 1}. ${b.name} (${b.category}) — ${b.rating}★, ${b.reviewCount} отзывов, ` +
-            `цена ${["₸","₸₸","₸₸₸"][b.priceLevel - 1]}, ${b.isOpen ? `открыто до ${b.openUntil}` : "закрыто"}`
-          ).join("\n");
+        /* ── Step 4: Stream summary or "not found" ── */
+        if (businesses.length === 0) {
+          const noResultText = `По запросу «${query}» в городе ${city} ничего не найдено. Попробуй другой запрос или сними фильтры.`;
+          for (const w of noResultText.split(" ")) {
+            sse(ctrl, { type: "delta", text: w + " " });
+            await new Promise(r => setTimeout(r, 25));
+          }
+        } else {
+          const topList = businesses.slice(0, 6)
+            .map((b, i) =>
+              `${i + 1}. ${b.name} (${b.category}) — ${b.rating}★, ${b.reviewCount} отзывов, ` +
+              `цена ${["₸","₸₸","₸₸₸"][b.priceLevel - 1]}, ${b.isOpen ? `открыто до ${b.openUntil}` : "закрыто"}`
+            ).join("\n");
 
-        await streamClaude(
-          ANTHROPIC_KEY,
-          "You are a friendly local guide for Kazakhstan cities. Write in RUSSIAN only. Be concise (2-3 sentences). " +
-          "Highlight the best option with **bold name**. Mention specific advantages: price, rating, open hours. " +
-          "Do NOT start with 'Ya nashel' or 'Vot'. Start directly with a recommendation.",
-          `User searched: "${query}" in ${city}, Kazakhstan\n\nTop results:\n${topList}`,
-          ctrl,
-        );
+          await streamClaude(
+            ANTHROPIC_KEY,
+            "You are a friendly local guide for Kazakhstan cities. Write in RUSSIAN only. Be concise (2-3 sentences). " +
+            "Highlight the best option with **bold name**. Mention specific advantages: price, rating, open hours. " +
+            "Do NOT start with 'Ya nashel' or 'Vot'. Start directly with a recommendation.",
+            `User searched: "${query}" in ${city}, Kazakhstan\n\nTop results:\n${topList}`,
+            ctrl,
+          );
+        }
 
         sse(ctrl, { type: "done", ms: Date.now() - start });
       } catch (err) {
