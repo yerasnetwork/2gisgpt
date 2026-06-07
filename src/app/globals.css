@@ -214,3 +214,15 @@ body {
 .ai-prose p  { margin-bottom: 0.75rem; line-height: 1.7; }
 .ai-prose strong { color: hsl(var(--color-primary-glow)); }
 .ai-prose em     { color: hsl(var(--color-accent)); font-style: normal; }
+
+/* ─── Hide scrollbar (filter row on mobile) ─────────────────── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Mobile tap target helpers ─────────────────────────────── */
+@media (max-width: 640px) {
+  .card-hover:hover { transform: none; } /* disable hover lift on touch */
+}
+
+/* ─── Safe area padding for notch phones ────────────────────── */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }

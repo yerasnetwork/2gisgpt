@@ -13,6 +13,13 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0a0b12",
+};
+
 export const metadata: Metadata = {
   title: "LocalAI — AI-поиск заведений в Казахстане",
   description:

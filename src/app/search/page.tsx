@@ -115,16 +115,16 @@ function SearchContent() {
 
       {/* Topbar */}
       <header className="sticky top-0 z-50 border-b border-border glass">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/" className="text-muted hover:text-white transition-colors shrink-0">
-            <ArrowLeft size={18} />
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 h-14 flex items-center gap-2 sm:gap-3">
+          <Link href="/" className="text-muted hover:text-white transition-colors shrink-0 p-1">
+            <ArrowLeft size={17} />
           </Link>
 
-          <Link href="/" className="flex items-center gap-1.5 shrink-0">
+          <Link href="/" className="flex items-center gap-1 shrink-0">
             <div className="size-6 rounded-md bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <Zap size={12} className="text-primary" />
+              <Zap size={11} className="text-primary" />
             </div>
-            <span className="font-bold text-sm hidden sm:block">
+            <span className="font-bold text-xs hidden sm:block">
               Local<span className="gradient-text">AI</span>
             </span>
           </Link>

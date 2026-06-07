@@ -8,8 +8,8 @@ import { clsx } from "clsx";
 type SortKey = "aiScore" | "rating" | "distance" | "priceLevel";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "aiScore",    label: "AI оценка"  },
-  { key: "rating",     label: "Рейтинг"    },
+  { key: "aiScore",    label: "AI"         },
+  { key: "rating",     label: "Рейтинг"   },
   { key: "distance",   label: "Расстояние" },
   { key: "priceLevel", label: "Цена"       },
 ];
@@ -20,13 +20,13 @@ interface ResultsListProps {
 }
 
 export function ResultsList({ businesses, loading }: ResultsListProps) {
-  const [sort, setSort] = useState<SortKey>("aiScore");
+  const [sort, setSort]       = useState<SortKey>("aiScore");
   const [openOnly, setOpenOnly] = useState(false);
 
   const sorted = [...businesses]
-    .filter((b) => !openOnly || b.isOpen)
+    .filter(b => !openOnly || b.isOpen)
     .sort((a, b) => {
-      if (sort === "distance") return (a.distance ?? 9999) - (b.distance ?? 9999);
+      if (sort === "distance")   return (a.distance ?? 9999) - (b.distance ?? 9999);
       if (sort === "priceLevel") return a.priceLevel - b.priceLevel;
       return (b[sort] ?? 0) - (a[sort] ?? 0);
     });
@@ -34,9 +34,7 @@ export function ResultsList({ businesses, loading }: ResultsListProps) {
   if (loading) {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <BusinessCardSkeleton key={i} />
-        ))}
+        {Array.from({ length: 5 }).map((_, i) => <BusinessCardSkeleton key={i} />)}
       </div>
     );
   }
@@ -44,57 +42,54 @@ export function ResultsList({ businesses, loading }: ResultsListProps) {
   if (!businesses.length) return null;
 
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          <SlidersHorizontal size={13} />
-          <span>Фильтр:</span>
-        </div>
-
+    <div className="space-y-3">
+      {/* Controls — scrollable on mobile */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {/* Open-only toggle */}
         <button
-          onClick={() => setOpenOnly((p) => !p)}
+          onClick={() => setOpenOnly(p => !p)}
           className={clsx(
-            "text-xs px-3 py-1 rounded-full border transition-all cursor-pointer",
+            "flex items-center gap-1.5 shrink-0 text-xs px-3 py-1.5 rounded-full border transition-all cursor-pointer",
             openOnly
               ? "bg-success/10 border-success/30 text-success"
-              : "border-border text-muted hover:border-border-bright/40 hover:text-white"
+              : "border-border text-muted hover:text-white hover:border-border-bright/40"
           )}
         >
-          Только открытые
+          <SlidersHorizontal size={11} />
+          Открытые
         </button>
 
-        <div className="ml-auto flex items-center gap-1">
-          <ArrowUpDown size={13} className="text-muted" />
-          <div className="flex gap-1">
-            {SORT_OPTIONS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setSort(key)}
-                className={clsx(
-                  "text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer",
-                  sort === key
-                    ? "bg-primary/15 border-primary/30 text-primary"
-                    : "border-border text-muted hover:text-white"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        {/* Divider */}
+        <div className="w-px h-4 bg-border shrink-0" />
+
+        {/* Sort pills */}
+        <div className="flex items-center gap-1 shrink-0">
+          <ArrowUpDown size={11} className="text-dim shrink-0" />
+          {SORT_OPTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSort(key)}
+              className={clsx(
+                "shrink-0 text-xs px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer",
+                sort === key
+                  ? "bg-primary/15 border-primary/30 text-primary"
+                  : "border-border text-muted hover:text-white"
+              )}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Count */}
-      <p className="text-xs text-muted">
-        Показано <span className="text-white font-medium">{sorted.length}</span> из {businesses.length} мест
+      <p className="text-xs text-muted px-0.5">
+        Найдено <span className="text-white font-medium">{sorted.length}</span> мест
       </p>
 
       {/* Cards */}
-      <div className="space-y-3">
-        {sorted.map((b, i) => (
-          <BusinessCard key={b.id} business={b} rank={i + 1} />
-        ))}
+      <div className="space-y-2.5">
+        {sorted.map((b, i) => <BusinessCard key={b.id} business={b} rank={i + 1} />)}
       </div>
     </div>
   );
