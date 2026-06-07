@@ -58,8 +58,8 @@ function parseSchedule(schedule?: Record<string, DGisDayData>): { isOpen: boolea
 }
 
 /* ── Price estimation from rubric name ─────────────────────────── */
-const CHEAP_KW = ["фастфуд","fast food","шаурм","донер","самса","бургер","хот-дог","пирожк","лаваш","хинкали"];
-const PRICEY_KW = ["ресторан","стейк","суши","sushi","морепродукт","французск","итальянск","японск","лобстер"];
+const CHEAP_KW = ["фастфуд","fast food","шаурм","донер","самса","бургер","хот-дог","пирожк","лаваш","хинкали","быстрое питание","быстрого питания","киоск","stolovaya","столовая"];
+const PRICEY_KW = ["ресторан","стейк","суши","sushi","морепродукт","французск","итальянск","японск","лобстер","fine dining"];
 
 function estimatePrice(rubrics?: DGisRubric[]): 1 | 2 | 3 {
   const cat = (rubrics?.[0]?.name ?? "").toLowerCase();

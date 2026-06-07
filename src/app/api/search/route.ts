@@ -128,7 +128,13 @@ export async function POST(req: NextRequest) {
         /* ── Step 1: Extract intent ── */
         const intentRaw = await callClaude(
           ANTHROPIC_KEY,
-          "Extract search intent from a local business query. Return ONLY valid JSON with: category (string, business type in Russian), minRating (number|null, e.g. 4.5), maxPrice (1|2|3|null where 1=cheap 3=expensive), openNow (boolean), sortBy ('rating'|'distance'|'price'|'popularity'). No explanation.",
+          "Extract search intent from a local business query. Return ONLY valid JSON with these fields:\n" +
+          "- category: string (business type in Russian, e.g. 'кофейня', 'донер', 'барбершоп')\n" +
+          "- minRating: number|null (only if user explicitly says 'хороший', 'топ', '4+' etc, otherwise null)\n" +
+          "- maxPrice: 1|2|3|null (1=cheap 3=expensive — ONLY if user explicitly says 'дешевый', 'бюджетный', 'дорогой', otherwise null)\n" +
+          "- openNow: boolean (true ONLY if user explicitly says 'открытый', 'сейчас', 'сегодня', otherwise false)\n" +
+          "- sortBy: 'rating'|'distance'|'popularity' (default 'popularity')\n" +
+          "IMPORTANT: Do NOT infer price from food type. 'донер'/'шаурма'/'кофе' alone does NOT mean maxPrice=1.",
           `User query: "${query}"\nCity: ${city}, Kazakhstan`,
         );
         let filters: SearchFilters = { sortBy: "popularity" };
