@@ -125,9 +125,12 @@ export async function searchPlaces(
   url.searchParams.set("q",          searchQ);
   url.searchParams.set("key",        apiKey);
   url.searchParams.set("fields",     "items.point,items.reviews,items.schedule,items.contact_groups,items.rubrics");
-  url.searchParams.set("page_size",  String(Math.min(limit, 50)));
+  url.searchParams.set("page_size",  String(Math.min(limit, 10)));
   url.searchParams.set("type",       "branch");
-  url.searchParams.set("sort",       filters.sortBy === "distance" ? "distance" : "popularity");
+  const sortVal = filters.sortBy === "distance" ? "distance"
+    : filters.sortBy === "rating" ? "rating"
+    : "relevance";
+  url.searchParams.set("sort", sortVal);
 
   const point = cityPoint(city);
   if (point) {

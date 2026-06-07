@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
         if (TWOGIS_KEY) {
           try {
-            businesses = await searchPlaces(query, city, filters, TWOGIS_KEY, 20);
+            businesses = await searchPlaces(query, city, filters, TWOGIS_KEY, 10);
           } catch { /* 2GIS failed, will use Claude */ }
         }
 
