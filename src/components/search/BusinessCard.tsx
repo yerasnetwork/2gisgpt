@@ -69,7 +69,11 @@ export function BusinessCard({ business: b, rank }: BusinessCardProps) {
             {b.isOpen ? (
               <span className="text-success">Открыто{b.openUntil ? ` до ${b.openUntil}` : ""}</span>
             ) : (
-              <span className="text-danger">Закрыто{b.openUntil ? ` · откр. в ${b.openUntil}` : ""}</span>
+              <span className="text-danger">
+                Закрыто{b.openUntil
+                  ? ` · откр. ${b.openTomorrow ? "завтра в" : "в"} ${b.openUntil}`
+                  : ""}
+              </span>
             )}
           </span>
           {b.phone && (

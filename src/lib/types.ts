@@ -11,7 +11,8 @@ export interface Business {
   distance?: number;    // metres
   priceLevel: 1 | 2 | 3; // ₸ | ₸₸ | ₸₸₸
   isOpen: boolean;
-  openUntil?: string;   // e.g. "23:00"
+  openUntil?: string;    // "HH:MM" — close time if open, next open time if closed
+  openTomorrow?: boolean; // true when closed and next opening is tomorrow
   phone?: string;
   photos?: string[];
   tags?: string[];

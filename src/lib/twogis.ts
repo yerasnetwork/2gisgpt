@@ -34,27 +34,63 @@ export interface SearchFilters {
 /* ── Schedule helpers ──────────────────────────────────────────── */
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function parseSchedule(schedule?: Record<string, DGisDayData>): { isOpen: boolean; openUntil?: string } {
+function toMin(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function parseSchedule(
+  schedule?: Record<string, DGisDayData>,
+): { isOpen: boolean; openUntil?: string; openTomorrow?: boolean } {
   if (!schedule) return { isOpen: false };
 
-  const now    = new Date();
-  const dayKey = DAY_KEYS[now.getDay()];
-  const day    = schedule[dayKey];
-  if (!day) return { isOpen: false };
-  if (day.is_24hours) return { isOpen: true, openUntil: "00:00" };
+  const now      = new Date();
+  const curMin   = now.getHours() * 60 + now.getMinutes();
+  const todayIdx = now.getDay();
 
-  const curMin = now.getHours() * 60 + now.getMinutes();
-
-  for (const p of day.working_hours ?? []) {
-    const [fH, fM] = p.from.split(":").map(Number);
-    const [tH, tM] = p.to.split(":").map(Number);
-    const from = fH * 60 + fM;
-    const to   = tH * 60 + tM;
-    if (curMin >= from && curMin < to) return { isOpen: true, openUntil: p.to };
+  // Returns true if curMin falls within [from, to), handling midnight-crossing (to < from)
+  function inPeriod(from: number, to: number): boolean {
+    return to > from ? curMin >= from && curMin < to : curMin >= from || curMin < to;
   }
 
-  const next = day.working_hours?.[0];
-  return { isOpen: false, openUntil: next?.from };
+  // 1) Check yesterday's midnight-crossing periods (e.g. 22:00–03:00 started yesterday)
+  const yKey = DAY_KEYS[(todayIdx + 6) % 7];
+  for (const p of schedule[yKey]?.working_hours ?? []) {
+    const from = toMin(p.from);
+    const to   = toMin(p.to);
+    if (to < from && curMin < to) {
+      return { isOpen: true, openUntil: p.to };
+    }
+  }
+
+  // 2) Check today's periods
+  const todayKey = DAY_KEYS[todayIdx];
+  const todayDay = schedule[todayKey];
+  if (!todayDay) return { isOpen: false };
+  if (todayDay.is_24hours) return { isOpen: true, openUntil: "00:00" };
+
+  for (const p of todayDay.working_hours ?? []) {
+    if (inPeriod(toMin(p.from), toMin(p.to))) {
+      return { isOpen: true, openUntil: p.to };
+    }
+  }
+
+  // 3) Find next opening later today
+  for (const p of todayDay.working_hours ?? []) {
+    const from = toMin(p.from);
+    if (from > curMin) {
+      return { isOpen: false, openUntil: p.from };
+    }
+  }
+
+  // 4) Find first slot tomorrow
+  const tmrKey = DAY_KEYS[(todayIdx + 1) % 7];
+  const tmrDay = schedule[tmrKey];
+  if (tmrDay?.is_24hours) return { isOpen: false, openUntil: "00:00", openTomorrow: true };
+  const firstTmr = tmrDay?.working_hours?.[0];
+  if (firstTmr) return { isOpen: false, openUntil: firstTmr.from, openTomorrow: true };
+
+  return { isOpen: false };
 }
 
 /* ── Price estimation from rubric name ─────────────────────────── */
@@ -79,7 +115,7 @@ function mapItem(item: DGisItem, city: City): Business {
   const reviews     = item.reviews;
   const rating      = reviews?.general_rating ?? reviews?.org_rating ?? reviews?.rating ?? 4.2;
   const reviewCount = reviews?.general_review_count ?? reviews?.org_review_count ?? reviews?.count ?? 0;
-  const { isOpen, openUntil } = parseSchedule(item.schedule);
+  const { isOpen, openUntil, openTomorrow } = parseSchedule(item.schedule);
   const phone = item.contact_groups
     ?.flatMap(g => g.contacts)
     .find(c => c.type === "phone")?.value;
@@ -96,6 +132,7 @@ function mapItem(item: DGisItem, city: City): Business {
     priceLevel:  estimatePrice(item.rubrics),
     isOpen,
     openUntil,
+    openTomorrow,
     phone,
     tags:        item.rubrics?.slice(1).map(r => r.name) ?? [],
     aiScore:     calcAiScore(rating, reviewCount),
