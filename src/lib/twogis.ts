@@ -48,11 +48,6 @@ function parseSchedule(
   const curMin   = now.getHours() * 60 + now.getMinutes();
   const todayIdx = now.getDay();
 
-  // Returns true if curMin falls within [from, to), handling midnight-crossing (to < from)
-  function inPeriod(from: number, to: number): boolean {
-    return to > from ? curMin >= from && curMin < to : curMin >= from || curMin < to;
-  }
-
   // 1) Check yesterday's midnight-crossing periods (e.g. 22:00–03:00 started yesterday)
   const yKey = DAY_KEYS[(todayIdx + 6) % 7];
   for (const p of schedule[yKey]?.working_hours ?? []) {
@@ -70,9 +65,12 @@ function parseSchedule(
   if (todayDay.is_24hours) return { isOpen: true, openUntil: "00:00" };
 
   for (const p of todayDay.working_hours ?? []) {
-    if (inPeriod(toMin(p.from), toMin(p.to))) {
-      return { isOpen: true, openUntil: p.to };
-    }
+    const from = toMin(p.from);
+    const to   = toMin(p.to);
+    // For midnight-crossing periods (to < from), only the evening portion (curMin >= from)
+    // belongs to today. The after-midnight portion is covered by step 1 (yesterday's check).
+    const open = to > from ? curMin >= from && curMin < to : curMin >= from;
+    if (open) return { isOpen: true, openUntil: p.to };
   }
 
   // 3) Find next opening later today

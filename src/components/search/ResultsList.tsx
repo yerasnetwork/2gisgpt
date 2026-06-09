@@ -23,13 +23,26 @@ export function ResultsList({ businesses, loading }: ResultsListProps) {
   const [sort, setSort]       = useState<SortKey>("aiScore");
   const [openOnly, setOpenOnly] = useState(false);
 
-  const sorted = [...businesses]
-    .filter(b => !openOnly || b.isOpen)
-    .sort((a, b) => {
-      if (sort === "distance")   return (a.distance ?? 9999) - (b.distance ?? 9999);
-      if (sort === "priceLevel") return a.priceLevel - b.priceLevel;
-      return (b[sort] ?? 0) - (a[sort] ?? 0);
-    });
+  const filtered = [...businesses].filter(b => !openOnly || b.isOpen);
+
+  let sorted: Business[];
+  if (filtered.length === 0) {
+    sorted = [];
+  } else {
+    const topIdx = filtered.reduce(
+      (bi, b, i) => ((b.aiScore ?? 0) > (filtered[bi].aiScore ?? 0) ? i : bi),
+      0,
+    );
+    const topAi = filtered[topIdx];
+    const rest = filtered
+      .filter((_, i) => i !== topIdx)
+      .sort((a, b) => {
+        if (sort === "distance")   return (a.distance ?? 9999) - (b.distance ?? 9999);
+        if (sort === "priceLevel") return a.priceLevel - b.priceLevel;
+        return (b[sort] ?? 0) - (a[sort] ?? 0);
+      });
+    sorted = [topAi, ...rest];
+  }
 
   if (loading) {
     return (

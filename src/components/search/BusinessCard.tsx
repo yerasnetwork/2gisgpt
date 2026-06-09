@@ -62,7 +62,7 @@ export function BusinessCard({ business: b, rank }: BusinessCardProps) {
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px] text-muted">
           <span className="flex items-center gap-1 min-w-0">
             <MapPin size={10} className="shrink-0" />
-            <span className="truncate">{b.address}</span>
+            <span className="break-words">{b.address}</span>
           </span>
           <span className="flex items-center gap-1 shrink-0">
             <Clock size={10} className="shrink-0" />
